@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}Vehículo {{ vehiculo.numero_orden }}{% endblock %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-car-front" style="color: #3498db;"></i> 
+                {{ vehiculo.marca }} {{ vehiculo.modelo }} {{ vehiculo.año }}
+                <small class="text-muted"> - {{ vehiculo.cliente_nombre }}</small>
+            </h2>
+            <div>
+                <a href="{{ url_for('subir_fotos_trabajo', trabajo_id=trabajo.id) }}" 
+                   class="btn btn-primary me-2">
+                    <i class="bi bi-camera"></i> Subir Fotos
+                </a>
+                <a href="{{ url_for('lista_vehiculos') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+        
+        <!-- Tarjeta de Resumen -->
+        <div class="card mb-4 border-primary">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <p class="mb-1"><strong><i class="bi bi-hash"></i> Número de Orden:</strong></p>
+                        <h4><code class="bg-primary text-white p-2 rounded">{{ vehiculo.numero_orden }}</code></h4>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="mb-1"><strong><i class="bi bi-circle-fill"></i> Estado Actual:</strong></p>
+                        {% if vehiculo.estado == 'pendiente' %}
+                        <span class="badge bg-warning fs-5 p-2">⏳ Pendiente</span>
+                        {% elif vehiculo.estado == 'en_proceso' %}
+                        <span class="badge bg-info fs-5 p-2">🔧 En Proceso</span>
+                        {% elif vehiculo.estado == 'terminado' %}
+                        <span class="badge bg-success fs-5 p-2">✅ Terminado</span>
+                        {% endif %}
+                        
+                        <!-- Form para cambiar estado -->
+                        <form method="POST" action="{{ url_for('actualizar_estado_trabajo', trabajo_id=trabajo.id) }}" 
+                              class="mt-2">
+                            <div class="input-group">
+                                <select name="estado" class="form-select" onchange="this.form.submit()">
+                                    <option value="pendiente" {% if vehiculo.estado == 'pendiente' %}selected{% endif %}>
+                                        ⏳ Cambiar a Pendiente
+                                    </option>
+                                    <option value="en_proceso" {% if vehiculo.estado == 'en_proceso' %}selected{% endif %}>
+                                        🔧 Cambiar a En Proceso
+                                    </option>
+                                    <option value="terminado" {% if vehiculo.estado == 'terminado' %}selected{% endif %}>
+                                        ✅ Cambiar a Terminado
+                                    </option>
+                                </select>
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="bi bi-arrow-clockwise"></i> Actualizar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="mb-1"><strong><i class="bi bi-person"></i> Cliente:</strong></p>
+                        <h6>{{ vehiculo.cliente_nombre }}</h6>
+                        {% if vehiculo.cliente_telefono %}
+                        <p class="mb-0"><i class="bi bi-telephone"></i> {{ vehiculo.cliente_telefono }}</p>
+                        {% endif %}
+                        {% if vehiculo.cliente_email %}
+                        <p class="mb-0"><i class="bi bi-envelope"></i> {{ vehiculo.cliente_email }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <p class="mb-1"><strong><i class="bi bi-calendar"></i> Fechas:</strong></p>
+                        <p class="mb-1"><strong>Ingreso:</strong> {{ vehiculo.fecha_ingreso }}</p>
+                        {% if trabajo.fecha_inicio %}
+                        <p class="mb-0"><strong>Inicio Trabajo:</strong> {{ trabajo.fecha_inicio }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Información del Vehículo -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header" style="background: #f8f9fa;">
+                <h6 class="mb-0"><i class="bi bi-info-circle text-primary"></i> Información del Vehículo</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong><i class="bi bi-car-front"></i> Marca:</strong></td>
+                        <td>{{ vehiculo.marca }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong><i class="bi bi-tag"></i> Modelo:</strong></td>
+                        <td>{{ vehiculo.modelo }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong><i class="bi bi-calendar"></i> Año:</strong></td>
+                        <td>{{ vehiculo.año }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong><i class="bi bi-palette"></i> Color:</strong></td>
+                        <td>{{ vehiculo.color }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong><i class="bi bi-123"></i> Placa:</strong></td>
+                        <td><span class="badge bg-secondary">{{ vehiculo.placa }}</span></td>
+                    </tr>
+                    {% if vehiculo.vin %}
+                    <tr>
+                        <td><strong><i class="bi bi-upc-scan"></i> VIN:</strong></td>
+                        <td><small><code>{{ vehiculo.vin }}</code></small></td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        
+        <!-- Información del Trabajo -->
+        <div class="card">
+            <div class="card-header" style="background: #f8f9fa;">
+                <h6 class="mb-0"><i class="bi bi-wrench text-primary"></i> Información del Trabajo</h6>
+            </div>
+            <div class="card-body">
+                <p><strong><i class="bi bi-card-text"></i> Descripción:</strong></p>
+                <div class="alert alert-light">
+                    {{ trabajo.descripcion }}
+                </div>
+                
+                {% if trabajo.observaciones %}
+                <p><strong><i class="bi bi-chat-text"></i> Observaciones:</strong></p>
+                <div class="alert alert-info">
+                    {{ trabajo.observaciones }}
+                </div>
+                {% endif %}
+                
+                {% if trabajo.costo_estimado and trabajo.costo_estimado != '0' %}
+                <p><strong><i class="bi bi-currency-dollar"></i> Costo Estimado:</strong></p>
+                <h5 class="text-success">${{ "{:,.2f}".format(trabajo.costo_estimado|float) }}</h5>
+                {% endif %}
+                
+                <p><strong><i class="bi bi-clock-history"></i> Última Actualización:</strong></p>
+                <p>{{ trabajo.ultima_actualizacion }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fotos -->
+    <div class="col-md-8">
+        <!-- Fotos de Llegada -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background: #f8f9fa;">
+                <h6 class="mb-0"><i class="bi bi-box-arrow-in-down text-primary"></i> Fotos de Llegada</h6>
+                {% if fotos_llegada %}
+                <span class="badge bg-primary">{{ fotos_llegada|length }} fotos</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if fotos_llegada %}
+                <div class="photo-gallery">
+                    {% for foto in fotos_llegada %}
+                    <div class="photo-item">
+                        <img src="{{ url_for('static', filename=foto.ruta_foto) }}" 
+                             class="img-thumbnail" 
+                             onclick="verFoto('{{ url_for('static', filename=foto.ruta_foto) }}', '{{ foto.descripcion }}', '{{ foto.fecha_subida }}')">
+                        {% if foto.descripcion %}
+                        <div class="photo-caption p-2">
+                            <small>{{ foto.descripcion[:30] }}{% if foto.descripcion|length > 30 %}...{% endif %}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-camera text-muted display-6"></i>
+                    <p class="text-muted mt-2 mb-0">No hay fotos de llegada</p>
+                    <a href="{{ url_for('subir_fotos_trabajo', trabajo_id=trabajo.id) }}?tipo=llegada" 
+                       class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-plus"></i> Agregar Fotos
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Fotos en Proceso -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background: #f8f9fa;">
+                <h6 class="mb-0"><i class="bi bi-gear text-primary"></i> Fotos en Proceso</h6>
+                {% if fotos_proceso %}
+                <span class="badge bg-primary">{{ fotos_proceso|length }} fotos</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if fotos_proceso %}
+                <div class="photo-gallery">
+                    {% for foto in fotos_proceso %}
+                    <div class="photo-item">
+                        <img src="{{ url_for('static', filename=foto.ruta_foto) }}" 
+                             class="img-thumbnail" 
+                             onclick="verFoto('{{ url_for('static', filename=foto.ruta_foto) }}', '{{ foto.descripcion }}', '{{ foto.fecha_subida }}')">
+                        {% if foto.descripcion %}
+                        <div class="photo-caption p-2">
+                            <small>{{ foto.descripcion[:30] }}{% if foto.descripcion|length > 30 %}...{% endif %}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-camera text-muted display-6"></i>
+                    <p class="text-muted mt-2 mb-0">No hay fotos en proceso</p>
+                    <a href="{{ url_for('subir_fotos_trabajo', trabajo_id=trabajo.id) }}?tipo=proceso" 
+                       class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-plus"></i> Agregar Fotos
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Fotos Terminado -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background: #f8f9fa;">
+                <h6 class="mb-0"><i class="bi bi-check-circle text-primary"></i> Fotos Terminado</h6>
+                {% if fotos_terminado %}
+                <span class="badge bg-primary">{{ fotos_terminado|length }} fotos</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if fotos_terminado %}
+                <div class="photo-gallery">
+                    {% for foto in fotos_terminado %}
+                    <div class="photo-item">
+                        <img src="{{ url_for('static', filename=foto.ruta_foto) }}" 
+                             class="img-thumbnail" 
+                             onclick="verFoto('{{ url_for('static', filename=foto.ruta_foto) }}', '{{ foto.descripcion }}', '{{ foto.fecha_subida }}')">
+                        {% if foto.descripcion %}
+                        <div class="photo-caption p-2">
+                            <small>{{ foto.descripcion[:30] }}{% if foto.descripcion|length > 30 %}...{% endif %}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-camera text-muted display-6"></i>
+                    <p class="text-muted mt-2 mb-0">No hay fotos terminado</p>
+                    <a href="{{ url_for('subir_fotos_trabajo', trabajo_id=trabajo.id) }}?tipo=terminado" 
+                       class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-plus"></i> Agregar Fotos
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Modal para ver foto en grande -->
+<div class="modal fade" id="fotoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-image"></i> Foto del Vehículo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <img id="fotoGrande" src="" class="img-fluid" style="max-height: 70vh; object-fit: contain;">
+                <div class="p-3">
+                    <p id="fotoDescripcion" class="mb-1"></p>
+                    <p id="fotoFecha" class="text-muted small mb-0"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function verFoto(src, descripcion, fecha) {
+    document.getElementById('fotoGrande').src = src;
+    document.getElementById('fotoDescripcion').textContent = descripcion || 'Sin descripción';
+    document.getElementById('fotoFecha').textContent = 'Subida: ' + (fecha || 'Fecha no disponible');
+    var myModal = new bootstrap.Modal(document.getElementById('fotoModal'));
+    myModal.show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Nueva Empresa{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white;">
+                <h5 class="mb-0"><i class="bi bi-building-add"></i> Registrar Nueva Empresa</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-info mb-4">
+                    <i class="bi bi-info-circle"></i> 
+                    Una empresa representa un taller mecánico que podrá gestionar sus propios vehículos y trabajos.
+                </div>
+                
+                <form method="POST">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Nombre de la Empresa *</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-building"></i></span>
+                            <input type="text" class="form-control" name="nombre" required 
+                                   placeholder="Ej: Taller Mecánico Pérez S.A.">
+                        </div>
+                        <small class="text-muted">Nombre completo del taller o empresa</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Dirección</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                            <input type="text" class="form-control" name="direccion" 
+                                   placeholder="Ej: Av. Principal #123, Ciudad">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Teléfono *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                                <input type="tel" class="form-control" name="telefono" required 
+                                       placeholder="Ej: (555) 123-4567">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Email *</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                <input type="email" class="form-control" name="email" required 
+                                       placeholder="Ej: contacto@taller.com">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-3">
+                        <button type="submit" class="btn btn-success btn-lg py-3">
+                            <i class="bi bi-check-circle"></i> Registrar Empresa
+                        </button>
+                        <a href="{{ url_for('dashboard_super_admin') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancelar y Volver
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

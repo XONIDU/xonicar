@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Subir Fotos{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: white;">
+                <h5 class="mb-0"><i class="bi bi-camera"></i> Subir Fotos del Trabajo</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex">
+                        <i class="bi bi-info-circle me-2 flex-shrink-0"></i>
+                        <div>
+                            <strong>Información del Trabajo:</strong><br>
+                            <strong>Orden:</strong> {{ trabajo.numero_orden }} | 
+                            <strong>Vehículo:</strong> {{ vehiculo.marca }} {{ vehiculo.modelo }} | 
+                            <strong>Cliente:</strong> {{ vehiculo.cliente_nombre }}
+                        </div>
+                    </div>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Tipo de Fotos *</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-tag"></i></span>
+                            <select class="form-select" name="tipo_foto" required>
+                                <option value="llegada" {% if request.args.get('tipo') == 'llegada' %}selected{% endif %}>
+                                    📥 Fotos de Llegada (Estado inicial del vehículo)
+                                </option>
+                                <option value="proceso" {% if request.args.get('tipo') == 'proceso' %}selected{% endif %}>
+                                    ⚙️ Fotos en Proceso (Durante las reparaciones)
+                                </option>
+                                <option value="terminado" {% if request.args.get('tipo') == 'terminado' %}selected{% endif %}>
+                                    ✅ Fotos Terminado (Trabajo completado)
+                                </option>
+                            </select>
+                        </div>
+                        <small class="text-muted">
+                            <span class="text-danger">Importante:</span> Al subir fotos "Terminado", el estado del trabajo cambiará automáticamente a "Terminado"
+                        </small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Descripción (opcional)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+                            <textarea class="form-control" name="descripcion" rows="3" 
+                                      placeholder="Ej: Daño en puerta izquierda, reparación de motor, cambio de aceite..."></textarea>
+                        </div>
+                        <small class="text-muted">Esta descripción se aplicará a todas las fotos subidas en este lote</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Seleccionar Fotos *</label>
+                        <div class="input-group">
+                            <input class="form-control" type="file" name="fotos" multiple 
+                                   accept="image/*" required id="fileInput"
+                                   onchange="updateFileCount()">
+                        </div>
+                        <small class="text-muted">
+                            Puedes seleccionar múltiples fotos (Ctrl+Click o Shift+Click). 
+                            Formatos aceptados: JPG, PNG, GIF. Tamaño máximo: 10MB por foto.
+                        </small>
+                        <div id="fileCount" class="text-muted mt-2" style="display: none;">
+                            <i class="bi bi-image"></i> <span id="count">0</span> fotos seleccionadas
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="enviar_email" value="1" id="enviarEmail" checked>
+                            <label class="form-check-label" for="enviarEmail">
+                                <i class="bi bi-envelope"></i> Enviar notificación por email al cliente
+                            </label>
+                        </div>
+                        <small class="text-muted">
+                            Si está marcado, se enviará un email al cliente con las fotos subidas
+                        </small>
+                    </div>
+                    
+                    <div class="d-grid gap-3">
+                        <button type="submit" class="btn btn-success btn-lg py-3">
+                            <i class="bi bi-cloud-upload"></i> Subir Fotos
+                        </button>
+                        <a href="{{ url_for('ver_vehiculo', vehiculo_id=vehiculo.id) }}" 
+                           class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Volver al Vehículo
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Fotos existentes (si hay) -->
+        {% if fotos_existentes %}
+        <div class="card mt-4">
+            <div class="card-header" style="background: #f8f9fa;">
+                <h6 class="mb-0"><i class="bi bi-images text-primary"></i> Fotos Actualmente Registradas</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for foto in fotos_existentes %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <img src="{{ url_for('static', filename=foto.ruta_foto) }}" 
+                                 class="card-img-top" style="height: 150px; object-fit: cover;"
+                                 onclick="verFoto('{{ url_for('static', filename=foto.ruta_foto) }}', '{{ foto.descripcion }}', '{{ foto.fecha_subida }}')">
+                            <div class="card-body p-2">
+                                <small class="text-muted d-block">
+                                    <i class="bi bi-calendar"></i> {{ foto.fecha_subida[:16] }}
+                                </small>
+                                {% if foto.descripcion %}
+                                <small class="d-block text-truncate" title="{{ foto.descripcion }}">
+                                    {{ foto.descripcion[:30] }}{% if foto.descripcion|length > 30 %}...{% endif %}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function updateFileCount() {
+    var input = document.getElementById('fileInput');
+    var countElement = document.getElementById('count');
+    var fileCountElement = document.getElementById('fileCount');
+    
+    if (input.files.length > 0) {
+        countElement.textContent = input.files.length;
+        fileCountElement.style.display = 'block';
+    } else {
+        fileCountElement.style.display = 'none';
+    }
+}
+
+// Inicializar contador si ya hay archivos seleccionados
+document.addEventListener('DOMContentLoaded', function() {
+    updateFileCount();
+});
+</script>
+{% endblock %}
