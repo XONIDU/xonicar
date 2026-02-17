@@ -6,10 +6,7 @@
 
 ## #Somos XONIDU
 
-**Advertencia:** Código con fines educativos. NO nos hacemos responsables del mal uso.
-
 ---
-
 ## 🎯 Objetivo
 
 Plataforma web para gestión integral de talleres mecánicos con Flask. Permite a super administradores gestionar múltiples talleres y a administradores controlar vehículos, trabajos y fotografías.
