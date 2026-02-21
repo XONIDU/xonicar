@@ -1,3 +1,7 @@
+#Somos XONIDU
+#Darian Alberto Camacho Salas
+
+
 #No requieres mayor requisito
 #Solo ejecuta el siguiente comando:
 
