@@ -117,7 +117,7 @@ Accede: `http://localhost:5000` (PC) o `http://TU-IP:5000` (móvil)
 - 📸 Instagram: @xonidu
 - 📘 Facebook: xonidu
 - 📧 Email: xonidu@gmail.com
-
+- 👤 Creador: Darian ALberto Camcho Salas
 ---
 
 **XONICAR v1.0** • Taller Manager • by XONIDU
