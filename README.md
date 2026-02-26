@@ -1,123 +1,95 @@
 # 🚗 XONICAR - Taller Manager
 
-**Desarrollado por:** Darian Alberto Camacho Salas
+**Advertencia:** Este sistema está diseñado para uso legítimo en talleres mecánicos. El autor no se hace responsable del uso indebido.
 
----
+## 🎯 ¿Qué es XONICAR?
 
-## #Somos XONIDU
+Plataforma web con Flask para gestión integral de talleres mecánicos. Permite:
 
----
-## 🎯 Objetivo
+- **Multi-tenant**: Gestionar múltiples talleres
+- **Control de vehículos**: Registro y seguimiento por estados
+- **Gestión fotográfica**: Imágenes por etapa (llegada, proceso, terminado)
+- **Sistema de roles**: Super admin y admin de empresa
 
-Plataforma web para gestión integral de talleres mecánicos con Flask. Permite a super administradores gestionar múltiples talleres y a administradores controlar vehículos, trabajos y fotografías.
+## 📥 Instalación
 
----
+```bash
+git clone https://github.com/XONIDU/xonicar.git
+cd xonicar
+```
 
-## 📋 Características
+### Dependencias:
 
-### 👑 Super Administrador
-- Crear y gestionar empresas/talleres
-- Crear administradores por empresa
+**Arch Linux**
+```bash
+sudo pacman -Syu python-pip
+pip install -r requisitos.txt --break-system-packages
+mkdir -p static/fotos data
+```
+
+**Ubuntu/Debian**
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip
+pip3 install -r requisitos.txt --break-system-packages
+mkdir -p static/fotos data
+```
+
+**Windows**
+```bash
+pip install -r requisitos.txt
+mkdir static\fotos data
+```
+
+## ⚙️ Uso
+
+```bash
+python start.py
+```
+Accede: `http://localhost:5000`
+
+### Credenciales por defecto:
+| Usuario | Contraseña | Rol |
+|---------|------------|-----|
+| xonicar123 | xonicar123 | super_admin |
+
+## 👑 Funcionalidades
+
+**Super Admin**
+- Crear/gestionar empresas
+- Crear admins por empresa
 - Activar/desactivar empresas
 
-### 🔧 Administrador de Empresa
+**Admin de Empresa**
 - Registrar vehículos con datos del cliente
-- Números de orden automáticos (ORDEN-YYYYMMDD-XXXX)
-- Estados: pendiente, en proceso, terminado
-- Subir fotos por etapa (llegada, proceso, terminado)
-- Buscar por placa, cliente o número de orden
-
----
+- Números automáticos: ORDEN-YYYYMMDD-XXXX
+- Estados: pendiente, proceso, terminado
+- Subir fotos por etapa
+- Buscar por placa, cliente u orden
 
 ## 📁 Estructura
 
 ```
 xonicar/
-├── README.md          # Documentación
-├── start.py           # Código principal
-└── templates/         # Plantillas HTML
-    ├── login.html
-    ├── dashboard_super_admin.html
-    ├── dashboard_admin_empresa.html
-    ├── nueva_empresa.html
-    ├── nuevo_admin_empresa.html
-    ├── lista_vehiculos.html
-    ├── nuevo_vehiculo.html
-    ├── ver_vehiculo.html
-    └── subir_fotos.html
+├── start.py
+├── requisitos.txt
+├── data/          # JSONs
+├── static/fotos/  # Imágenes
+└── templates/     # HTMLs
 ```
 
----
+## 📝 Formatos
 
-## 📦 Instalación
+Imágenes: JPG, JPEG, PNG, GIF
 
-### Arch Linux
-```bash
-sudo pacman -Syu python-pip
-pip install Flask --break-system-packages
-mkdir -p static/fotos data
-```
+## ✉️ Contacto
 
-### Ubuntu / Debian
-```bash
-sudo apt update
-sudo apt install -y python3 python3-pip
-pip3 install Flask --break-system-packages
-mkdir -p static/fotos data
-```
-
-### Windows
-```bash
-pip install Flask
-mkdir static\fotos data
-```
+- **Creador**: Darian Alberto Camacho Salas
+- **Email**: xonidu@gmail.com
+- **IG**: @xonidu | **FB**: xonidu
+- **#Somos XONIDU**
 
 ---
 
-## 🚀 Ejecución
-
-```bash
-python start.py
-```
-
-Accede: `http://localhost:5000` (PC) o `http://TU-IP:5000` (móvil)
-
----
-
-## 👑 Credenciales por Defecto
-
-| Usuario | Contraseña | Rol |
-|---------|------------|-----|
-| xonicar123 | xonicar123 | super_admin |
-
----
-
-## 📝 Formatos Soportados
-
-**Imágenes:** JPG, JPEG, PNG, GIF
-
----
-
-## 🛠️ Solución de Problemas
-
-- **Puerto ocupado:** Cambia el puerto en `start.py`
-- **No se guardan fotos:** Verifica permisos en `static/fotos/`
-- **Móvil no conecta:** Verifica firewall y IP
-
----
-
-## 👨‍💻 Desarrollador
-
-**Darian Alberto Camacho Salas**
-
----
-
-## 📞 Contacto XONIDU
-
-- 📸 Instagram: @xonidu
-- 📘 Facebook: xonidu
-- 📧 Email: xonidu@gmail.com
-- 👤 Creador: Darian ALberto Camcho Salas
----
-
-**XONICAR v1.0** • Taller Manager • by XONIDU
+**XONICAR v1.0** • by XONIDU
+**Creador:** Darian Alberto Camacho Salas
