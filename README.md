@@ -91,5 +91,5 @@ Imágenes: JPG, JPEG, PNG, GIF
 
 ---
 
-**XONICAR v1.0** • by XONIDU
+**XONICAR v4.2.0** • by XONIDU
 **Creador:** Darian Alberto Camacho Salas
