@@ -4,7 +4,7 @@
 
 ## 🎯 ¿Qué es XONICAR?
 
-Plataforma web con Flask para gestión integral de talleres mecánicos. Permite:
+Plataforma web con Flask para gestión integral de talleres mecánicos, permite:
 
 - **Multi-tenant**: Gestionar múltiples talleres
 - **Control de vehículos**: Registro y seguimiento por estados
