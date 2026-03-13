@@ -1,6 +1,6 @@
 # 🚗 XONICAR - Taller Manager
 
-**Advertencia:** Este sistema está diseñado para uso legítimo en talleres mecánicos. El autor no se hace responsable del uso indebido.
+**Advertencia:** Este sistema está diseñado para uso legítimo en talleres mecánicos. El autor no se hace responsable del uso dado.
 
 ## 🎯 ¿Qué es XONICAR?
 
