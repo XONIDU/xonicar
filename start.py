@@ -1,679 +1,458 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+XONICAR 2026 - Lanzador Universal del Taller Manager
+Este script ejecuta xonicar.py y verifica dependencias
+Desarrollado por: Darian Alberto Camacho Salas
+#Somos XONIDU
+"""
+
+import subprocess
+import sys
 import os
-import csv
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
-from datetime import datetime
-from functools import wraps
-import secrets
-import string
+import platform
+import shutil
+import importlib.util
 
-app = Flask(__name__)
-app.secret_key = "clave_super_secreta_xonicar123"
+# Colores para terminal
+class Colors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    END = '\033[0m'
+    BOLD = '\033[1m'
+    
+    @staticmethod
+    def supports_color():
+        """Verifica si la terminal soporta colores"""
+        if platform.system() == 'Windows':
+            try:
+                import ctypes
+                kernel32 = ctypes.windll.kernel32
+                return kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+            except:
+                return False
+        return True
 
-# Configuración básica
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'fotos')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# Desactivar colores si no hay soporte
+if not Colors.supports_color():
+    for attr in dir(Colors):
+        if not attr.startswith('_') and attr != 'supports_color':
+            setattr(Colors, attr, '')
 
-# Archivos CSV
-DATA_FOLDER = os.path.join(BASE_DIR, 'data')
-os.makedirs(DATA_FOLDER, exist_ok=True)
+def get_system():
+    """Detecta el sistema operativo"""
+    return platform.system().lower()
 
-USUARIOS_CSV = os.path.join(DATA_FOLDER, 'usuarios.csv')
-EMPRESAS_CSV = os.path.join(DATA_FOLDER, 'empresas.csv')
-VEHICULOS_CSV = os.path.join(DATA_FOLDER, 'vehiculos.csv')
-TRABAJOS_CSV = os.path.join(DATA_FOLDER, 'trabajos.csv')
-FOTOS_CSV = os.path.join(DATA_FOLDER, 'fotos.csv')
-
-# =============================================
-# FUNCIONES AUXILIARES
-# =============================================
-
-def leer_csv(archivo):
-    if not os.path.exists(archivo):
-        return []
+def get_linux_distro():
+    """Detecta la distribucion de Linux"""
+    if get_system() != 'linux':
+        return None
+    
     try:
-        with open(archivo, 'r', encoding='utf-8') as f:
-            return list(csv.DictReader(f))
+        if os.path.exists('/etc/os-release'):
+            with open('/etc/os-release', 'r') as f:
+                content = f.read().lower()
+                if 'ubuntu' in content:
+                    return 'ubuntu'
+                elif 'debian' in content:
+                    return 'debian'
+                elif 'fedora' in content:
+                    return 'fedora'
+                elif 'centos' in content:
+                    return 'centos'
+                elif 'arch' in content:
+                    return 'arch'
+                elif 'manjaro' in content:
+                    return 'manjaro'
+                elif 'mint' in content:
+                    return 'mint'
+        return 'linux-generico'
     except:
-        return []
+        return 'linux-generico'
 
-def escribir_csv(archivo, datos, campos):
-    with open(archivo, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=campos)
-        writer.writeheader()
-        if datos:
-            writer.writerows(datos)
-
-def generar_id():
-    return ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
-
-def generar_numero_orden():
-    fecha = datetime.now().strftime('%Y%m%d')
-    trabajos = leer_csv(TRABAJOS_CSV)
-    ordenes_hoy = [t['numero_orden'] for t in trabajos if fecha in t.get('numero_orden', '')]
-    
-    if ordenes_hoy:
+def get_python_command():
+    """Obtiene el comando Python correcto"""
+    if get_system() == 'windows':
+        return ['python']
+    else:
         try:
-            ultimo = max([int(o.split('-')[-1]) for o in ordenes_hoy])
-            nuevo = ultimo + 1
+            subprocess.run(['python3', '--version'], capture_output=True, check=True)
+            return ['python3']
         except:
-            nuevo = 1
-    else:
-        nuevo = 1
+            return ['python']
+
+def print_banner():
+    """Muestra el banner de XONICAR"""
+    sistema = get_system()
+    distro = get_linux_distro()
     
-    return f"ORDEN-{fecha}-{nuevo:04d}"
-
-def inicializar_sistema():
-    # Crear super admin si no existe
-    if not os.path.exists(USUARIOS_CSV):
-        super_admin = {
-            'username': 'xonicar123',
-            'password': 'xonicar123',
-            'nombre': 'Super Administrador',
-            'email': 'admin@taller.com',
-            'telefono': '5550000001',
-            'rol': 'super_admin',
-            'empresa_id': '',
-            'creado_por': 'sistema',
-            'activo': '1'
-        }
-        
-        with open(USUARIOS_CSV, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['username', 'password', 'nombre', 'email', 'telefono', 
-                           'rol', 'empresa_id', 'creado_por', 'activo'])
-            writer.writerow([super_admin['username'], super_admin['password'], 
-                           super_admin['nombre'], super_admin['email'], 
-                           super_admin['telefono'], super_admin['rol'], 
-                           super_admin['empresa_id'], super_admin['creado_por'], 
-                           super_admin['activo']])
+    sistema_texto = {
+        'windows': 'WINDOWS',
+        'linux': f'LINUX ({distro.upper()})' if distro else 'LINUX',
+        'darwin': 'MACOS'
+    }.get(sistema, 'DESCONOCIDO')
     
-    # Empresas
-    if not os.path.exists(EMPRESAS_CSV):
-        with open(EMPRESAS_CSV, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['id', 'nombre', 'direccion', 'telefono', 'email', 
-                           'fecha_registro', 'creado_por', 'activo'])
+    banner = f"""
+{Colors.BLUE}{Colors.BOLD}═══════════════════════════════════════════════════════════
+                    XONICAR 2026 v1.0                    
+              Sistema de Gestión para Talleres            
+              Mecánicos - Multiempresa                
+                                                          
+              Sistema detectado: {sistema_texto}            
+                                                          
+              Desarrollado por: Darian Alberto            
+              Camacho Salas                               
+              #Somos XONIDU
+═══════════════════════════════════════════════════════════{Colors.END}
+    """
+    print(banner)
+
+def check_python():
+    """Verifica Python instalado"""
+    try:
+        cmd = get_python_command() + ['--version']
+        subprocess.run(cmd, capture_output=True, check=True)
+        return True
+    except:
+        return False
+
+def check_command(comando):
+    """Verifica si un comando existe"""
+    return shutil.which(comando) is not None
+
+def check_python_module(module_name):
+    """Verifica si un modulo de Python esta instalado"""
+    return importlib.util.find_spec(module_name) is not None
+
+def read_requirements():
+    """Lee requisitos.txt y devuelve lista de paquetes"""
+    req_file = 'requisitos.txt'
+    paquetes = []
+    if os.path.exists(req_file):
+        with open(req_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    # Extraer solo el nombre del paquete (sin versiones)
+                    pkg = line.split('==')[0].split('>=')[0].split('<=')[0].strip()
+                    if pkg:
+                        paquetes.append(pkg)
+    return paquetes
+
+def check_dependencies():
+    """Verifica las dependencias de Python necesarias"""
+    print(f"\n{Colors.BOLD}Verificando dependencias de Python...{Colors.END}")
     
-    # Vehículos
-    if not os.path.exists(VEHICULOS_CSV):
-        with open(VEHICULOS_CSV, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['id', 'empresa_id', 'cliente_nombre', 'cliente_email', 
-                           'cliente_telefono', 'marca', 'modelo', 'año', 'color', 
-                           'placa', 'vin', 'fecha_ingreso', 'estado', 'numero_orden'])
+    # Leer requisitos.txt
+    paquetes_requeridos = read_requirements()
+    if not paquetes_requeridos:
+        # Fallback: Flask como mínimo
+        paquetes_requeridos = ['flask']
     
-    # Trabajos
-    if not os.path.exists(TRABAJOS_CSV):
-        with open(TRABAJOS_CSV, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['id', 'vehiculo_id', 'empresa_id', 'numero_orden', 
-                           'estado', 'descripcion', 'observaciones', 'costo_estimado', 
-                           'fecha_inicio', 'ultima_actualizacion'])
-    
-    # Fotos
-    if not os.path.exists(FOTOS_CSV):
-        with open(FOTOS_CSV, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['id', 'trabajo_id', 'empresa_id', 'tipo_foto', 
-                           'ruta_foto', 'descripcion', 'fecha_subida', 'correo_enviado'])
-
-# =============================================
-# DECORADORES DE AUTENTICACIÓN
-# =============================================
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'username' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def super_admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'username' not in session or session.get('rol') != 'super_admin':
-            flash('Acceso denegado. Requiere permisos de super administrador.')
-            return redirect(url_for('dashboard'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def admin_empresa_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'username' not in session or session.get('rol') != 'admin_empresa':
-            flash('Acceso denegado. Requiere permisos de administrador.')
-            return redirect(url_for('dashboard'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-# =============================================
-# RUTAS DE LA APLICACIÓN
-# =============================================
-
-@app.route('/')
-def index():
-    return redirect(url_for('login'))
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        usuarios = leer_csv(USUARIOS_CSV)
-        usuario = next((u for u in usuarios if u['username'] == username and 
-                       u['password'] == password and u['activo'] == '1'), None)
-        
-        if usuario:
-            session['username'] = username
-            session['nombre'] = usuario['nombre']
-            session['rol'] = usuario['rol']
-            session['empresa_id'] = usuario['empresa_id']
-            
-            flash(f'✅ ¡Bienvenido {usuario["nombre"]}!')
-            return redirect(url_for('dashboard'))
+    # Verificar cada paquete
+    faltantes = []
+    for paquete in paquetes_requeridos:
+        # Normalizar nombre de importación (algunos paquetes tienen diferente nombre)
+        import_name = paquete.lower().replace('-', '_')
+        if import_name == 'flask':
+            import_name = 'flask'  # Flask se importa como flask
+        # Verificar si está instalado
+        if check_python_module(import_name):
+            print(f"{Colors.GREEN}  - {paquete}: OK{Colors.END}")
         else:
-            flash('❌ Usuario o contraseña incorrectos')
+            print(f"{Colors.YELLOW}  - {paquete}: FALTANTE{Colors.END}")
+            faltantes.append(paquete)
     
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash('🔒 Sesión cerrada correctamente')
-    return redirect(url_for('login'))
-
-@app.route('/dashboard')
-@login_required
-def dashboard():
-    rol = session.get('rol')
+    # Verificar dependencias del sistema para ciertos paquetes (si es necesario)
+    # Flask no requiere dependencias de sistema adicionales, pero podemos dejar esto por si acaso
+    # En Linux, a veces se necesita python3-venv, etc. No obligatorio.
     
-    if rol == 'super_admin':
-        return redirect(url_for('dashboard_super_admin'))
-    elif rol == 'admin_empresa':
-        return redirect(url_for('dashboard_admin_empresa'))
+    return faltantes
+
+def install_dependencies(faltantes):
+    """Instala las dependencias faltantes usando pip y requisitos.txt"""
+    if not faltantes:
+        return True
+    
+    print(f"\n{Colors.BOLD}Instalando dependencias faltantes...{Colors.END}")
+    
+    sistema = get_system()
+    distro = get_linux_distro()
+    
+    # Intentar instalar usando requisitos.txt directamente
+    req_file = 'requisitos.txt'
+    if os.path.exists(req_file):
+        print(f"Usando {req_file} para instalar dependencias...")
+        # Construir comando de instalacion
+        cmd = [sys.executable, '-m', 'pip', 'install', '-r', req_file]
+        
+        # Agregar opciones segun sistema
+        if sistema == 'linux':
+            if distro in ['arch', 'manjaro', 'fedora']:
+                cmd.append('--break-system-packages')
+                print(f"{Colors.YELLOW}Usando --break-system-packages para {distro}{Colors.END}")
+            else:
+                cmd.append('--user')
+        elif sistema == 'darwin':
+            cmd.append('--user')
+        
+        try:
+            print(f"Ejecutando: {' '.join(cmd)}")
+            subprocess.run(cmd, check=True)
+            print(f"{Colors.GREEN}Dependencias instaladas correctamente{Colors.END}")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"{Colors.RED}Error instalando dependencias: {e}{Colors.END}")
+            print(f"\n{Colors.YELLOW}Intentando metodo alternativo...{Colors.END}")
+            # Segundo intento: solo --user
+            try:
+                cmd2 = [sys.executable, '-m', 'pip', 'install', '--user', '-r', req_file]
+                subprocess.run(cmd2, check=True)
+                print(f"{Colors.GREEN}Instaladas con --user{Colors.END}")
+                return True
+            except:
+                print(f"{Colors.RED}Fallo la instalacion{Colors.END}")
+                print(f"\nInstala manualmente:")
+                print(f"  pip install -r {req_file}")
+                return False
     else:
-        flash('⚠️ Rol no reconocido')
-        return redirect(url_for('logout'))
+        # Fallback: instalar paquetes individuales
+        print(f"No se encuentra {req_file}, instalando paquetes individualmente...")
+        cmd_base = [sys.executable, '-m', 'pip', 'install']
+        if sistema == 'linux':
+            if distro in ['arch', 'manjaro', 'fedora']:
+                cmd_base.append('--break-system-packages')
+            else:
+                cmd_base.append('--user')
+        elif sistema == 'darwin':
+            cmd_base.append('--user')
+        
+        for paquete in faltantes:
+            cmd = cmd_base + [paquete]
+            try:
+                print(f"Instalando {paquete}...")
+                subprocess.run(cmd, check=True)
+            except:
+                print(f"{Colors.RED}Error instalando {paquete}{Colors.END}")
+                return False
+        return True
 
-# =============================================
-# RUTAS SUPER ADMIN
-# =============================================
+def crear_directorios():
+    """Crea los directorios necesarios para la aplicación"""
+    print(f"\n{Colors.BOLD}Verificando directorios necesarios...{Colors.END}")
+    directorios = ['static/fotos', 'data']
+    for d in directorios:
+        if not os.path.exists(d):
+            os.makedirs(d, exist_ok=True)
+            print(f"{Colors.GREEN}  Creado: {d}{Colors.END}")
+        else:
+            print(f"{Colors.GREEN}  Existente: {d}{Colors.END}")
 
-@app.route('/dashboard/super-admin')
-@super_admin_required
-def dashboard_super_admin():
-    empresas = leer_csv(EMPRESAS_CSV)
-    usuarios = leer_csv(USUARIOS_CSV)
-    
-    # Filtrar solo administradores de empresa
-    admins_empresa = [u for u in usuarios if u['rol'] == 'admin_empresa']
-    
-    # Obtener estadísticas
-    stats = {
-        'total_empresas': len(empresas),
-        'total_admins': len(admins_empresa),
-        'empresas_activas': len([e for e in empresas if e.get('activo') == '1']),
-        'empresas_inactivas': len([e for e in empresas if e.get('activo') == '0'])
-    }
-    
-    return render_template('dashboard_super_admin.html', 
-                         empresas=empresas, 
-                         admins=admins_empresa, 
-                         stats=stats)
+def mostrar_ayuda():
+    """Muestra ayuda de uso"""
+    ayuda = f"""
+{Colors.BOLD}USO DE XONICAR:{Colors.END}
 
-@app.route('/super-admin/empresas/nueva', methods=['GET', 'POST'])
-@super_admin_required
-def nueva_empresa():
-    if request.method == 'POST':
-        nombre = request.form['nombre']
-        direccion = request.form.get('direccion', '')
-        telefono = request.form['telefono']
-        email = request.form['email']
-        
-        # Crear empresa
-        empresa_id = generar_id()
-        nueva_empresa = {
-            'id': empresa_id,
-            'nombre': nombre,
-            'direccion': direccion,
-            'telefono': telefono,
-            'email': email,
-            'fecha_registro': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'creado_por': session['username'],
-            'activo': '1'
-        }
-        
-        empresas = leer_csv(EMPRESAS_CSV)
-        empresas.append(nueva_empresa)
-        escribir_csv(EMPRESAS_CSV, empresas, 
-                   ['id', 'nombre', 'direccion', 'telefono', 'email', 
-                    'fecha_registro', 'creado_por', 'activo'])
-        
-        flash(f'✅ Empresa "{nombre}" creada exitosamente')
-        return redirect(url_for('dashboard_super_admin'))
-    
-    return render_template('nueva_empresa.html')
+  python start.py
 
-@app.route('/super-admin/usuarios/nuevo', methods=['GET', 'POST'])
-@super_admin_required
-def nuevo_admin_empresa():
-    empresas = leer_csv(EMPRESAS_CSV)
-    
-    if request.method == 'POST':
-        empresa_id = request.form['empresa_id']
-        username = request.form['username']
-        password = request.form['password']
-        nombre = request.form['nombre']
-        email = request.form['email']
-        telefono = request.form.get('telefono', '')
-        
-        # Verificar si el usuario ya existe
-        usuarios = leer_csv(USUARIOS_CSV)
-        if any(u['username'] == username for u in usuarios):
-            flash('❌ El nombre de usuario ya existe')
-            return redirect(url_for('nuevo_admin_empresa'))
-        
-        # Crear usuario admin
-        nuevo_usuario = {
-            'username': username,
-            'password': password,
-            'nombre': nombre,
-            'email': email,
-            'telefono': telefono,
-            'rol': 'admin_empresa',
-            'empresa_id': empresa_id,
-            'creado_por': session['username'],
-            'activo': '1'
-        }
-        
-        usuarios.append(nuevo_usuario)
-        escribir_csv(USUARIOS_CSV, usuarios, 
-                   ['username', 'password', 'nombre', 'email', 'telefono', 
-                    'rol', 'empresa_id', 'creado_por', 'activo'])
-        
-        flash(f'✅ Administrador "{nombre}" creado exitosamente')
-        return redirect(url_for('dashboard_super_admin'))
-    
-    return render_template('nuevo_admin_empresa.html', empresas=empresas)
+{Colors.BOLD}DESCRIPCION:{Colors.END}
 
-@app.route('/super-admin/empresa/<empresa_id>/toggle')
-@super_admin_required
-def toggle_empresa(empresa_id):
-    empresas = leer_csv(EMPRESAS_CSV)
-    
-    for empresa in empresas:
-        if empresa['id'] == empresa_id:
-            empresa['activo'] = '0' if empresa.get('activo') == '1' else '1'
-            estado = "activada" if empresa['activo'] == '1' else "desactivada"
-            break
-    
-    escribir_csv(EMPRESAS_CSV, empresas, 
-               ['id', 'nombre', 'direccion', 'telefono', 'email', 
-                'fecha_registro', 'creado_por', 'activo'])
-    
-    flash(f'✅ Empresa {estado} exitosamente')
-    return redirect(url_for('dashboard_super_admin'))
+  XONICAR es un sistema web para gestionar talleres mecánicos.
+  Permite a super administradores manejar múltiples empresas y
+  a administradores de taller controlar vehículos, trabajos y fotos.
 
-# =============================================
-# RUTAS ADMIN EMPRESA
-# =============================================
+{Colors.BOLD}ACCESO:{Colors.END}
 
-@app.route('/dashboard/admin-empresa')
-@admin_empresa_required
-def dashboard_admin_empresa():
-    empresa_id = session.get('empresa_id')
-    
-    vehiculos = leer_csv(VEHICULOS_CSV)
-    trabajos = leer_csv(TRABAJOS_CSV)
-    empresas = leer_csv(EMPRESAS_CSV)
-    
-    # Filtrar por empresa
-    vehiculos_empresa = [v for v in vehiculos if v['empresa_id'] == empresa_id]
-    trabajos_empresa = [t for t in trabajos if t['empresa_id'] == empresa_id]
-    
-    # Obtener info de la empresa
-    empresa_info = next((e for e in empresas if e['id'] == empresa_id), None)
-    
-    # Estadísticas
-    stats = {
-        'total_vehiculos': len(vehiculos_empresa),
-        'trabajos_pendientes': len([t for t in trabajos_empresa if t['estado'] == 'pendiente']),
-        'trabajos_proceso': len([t for t in trabajos_empresa if t['estado'] == 'en_proceso']),
-        'trabajos_terminados': len([t for t in trabajos_empresa if t['estado'] == 'terminado'])
-    }
-    
-    # Obtener últimos 10 vehículos
-    vehiculos_recientes = sorted(vehiculos_empresa, 
-                                key=lambda x: x.get('fecha_ingreso', ''), 
-                                reverse=True)[:10]
-    
-    # Añadir ID del trabajo a cada vehículo
-    for vehiculo in vehiculos_recientes:
-        trabajo = next((t for t in trabajos_empresa if t['vehiculo_id'] == vehiculo['id']), None)
-        if trabajo:
-            vehiculo['trabajo_id'] = trabajo['id']
-    
-    return render_template('dashboard_admin_empresa.html', 
-                         vehiculos=vehiculos_recientes, 
-                         stats=stats,
-                         empresa_info=empresa_info)
+  Después de iniciar, abre tu navegador en:
+    http://localhost:5000
+    (o http://TU-IP:5000 desde otros dispositivos)
 
-@app.route('/admin/vehiculos')
-@admin_empresa_required
-def lista_vehiculos():
-    empresa_id = session.get('empresa_id')
-    
-    vehiculos = leer_csv(VEHICULOS_CSV)
-    trabajos = leer_csv(TRABAJOS_CSV)
-    
-    # Filtrar por empresa
-    vehiculos_empresa = [v for v in vehiculos if v['empresa_id'] == empresa_id]
-    
-    # Aplicar filtros
-    estado_filter = request.args.get('estado')
-    if estado_filter:
-        vehiculos_empresa = [v for v in vehiculos_empresa if v['estado'] == estado_filter]
-    
-    search_filter = request.args.get('search')
-    if search_filter:
-        search_lower = search_filter.lower()
-        vehiculos_empresa = [v for v in vehiculos_empresa if 
-                            search_lower in v['cliente_nombre'].lower() or 
-                            search_lower in v['placa'].lower() or 
-                            search_lower in v['numero_orden'].lower()]
-    
-    # Añadir ID del trabajo a cada vehículo
-    for vehiculo in vehiculos_empresa:
-        trabajo = next((t for t in trabajos if t['vehiculo_id'] == vehiculo['id']), None)
-        if trabajo:
-            vehiculo['trabajo_id'] = trabajo['id']
-    
-    # Ordenar por fecha de ingreso (más recientes primero)
-    vehiculos_empresa = sorted(vehiculos_empresa, 
-                              key=lambda x: x.get('fecha_ingreso', ''), 
-                              reverse=True)
-    
-    # Aplicar límite
-    limit = int(request.args.get('limit', 10))
-    vehiculos_empresa = vehiculos_empresa[:limit]
-    
-    return render_template('lista_vehiculos.html', 
-                         vehiculos=vehiculos_empresa,
-                         total_vehiculos=len([v for v in vehiculos if v['empresa_id'] == empresa_id]))
+{Colors.BOLD}CREDENCIALES POR DEFECTO:{Colors.END}
 
-@app.route('/admin/vehiculos/nuevo', methods=['GET', 'POST'])
-@admin_empresa_required
-def nuevo_vehiculo():
-    empresa_id = session.get('empresa_id')
-    
-    if request.method == 'POST':
-        # Datos del cliente
-        cliente_nombre = request.form['cliente_nombre']
-        cliente_email = request.form.get('cliente_email', '')
-        cliente_telefono = request.form['cliente_telefono']
-        
-        # Datos del vehículo
-        marca = request.form['marca']
-        modelo = request.form['modelo']
-        año = request.form['año']
-        color = request.form.get('color', '')
-        placa = request.form['placa']
-        vin = request.form.get('vin', '')
-        
-        # Datos del trabajo
-        descripcion = request.form['descripcion']
-        estado = request.form['estado']
-        costo_estimado = request.form.get('costo_estimado', '0')
-        
-        # Generar IDs y número de orden
-        vehiculo_id = generar_id()
-        trabajo_id = generar_id()
-        numero_orden = generar_numero_orden()
-        fecha_actual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Guardar vehículo
-        nuevo_vehiculo = {
-            'id': vehiculo_id,
-            'empresa_id': empresa_id,
-            'cliente_nombre': cliente_nombre,
-            'cliente_email': cliente_email,
-            'cliente_telefono': cliente_telefono,
-            'marca': marca,
-            'modelo': modelo,
-            'año': año,
-            'color': color,
-            'placa': placa,
-            'vin': vin,
-            'fecha_ingreso': fecha_actual,
-            'estado': estado,
-            'numero_orden': numero_orden
-        }
-        
-        # Guardar trabajo
-        nuevo_trabajo = {
-            'id': trabajo_id,
-            'vehiculo_id': vehiculo_id,
-            'empresa_id': empresa_id,
-            'numero_orden': numero_orden,
-            'estado': estado,
-            'descripcion': descripcion,
-            'observaciones': '',
-            'costo_estimado': costo_estimado,
-            'fecha_inicio': fecha_actual,
-            'ultima_actualizacion': fecha_actual
-        }
-        
-        # Guardar en CSV
-        vehiculos = leer_csv(VEHICULOS_CSV)
-        vehiculos.append(nuevo_vehiculo)
-        escribir_csv(VEHICULOS_CSV, vehiculos, 
-                   ['id', 'empresa_id', 'cliente_nombre', 'cliente_email', 
-                    'cliente_telefono', 'marca', 'modelo', 'año', 'color', 
-                    'placa', 'vin', 'fecha_ingreso', 'estado', 'numero_orden'])
-        
-        trabajos = leer_csv(TRABAJOS_CSV)
-        trabajos.append(nuevo_trabajo)
-        escribir_csv(TRABAJOS_CSV, trabajos, 
-                   ['id', 'vehiculo_id', 'empresa_id', 'numero_orden', 
-                    'estado', 'descripcion', 'observaciones', 'costo_estimado', 
-                    'fecha_inicio', 'ultima_actualizacion'])
-        
-        flash(f'✅ Vehículo registrado exitosamente. Número de orden: {numero_orden}')
-        return redirect(url_for('ver_vehiculo', vehiculo_id=vehiculo_id))
-    
-    return render_template('nuevo_vehiculo.html')
+  Usuario: xonicar123
+  Contraseña: xonicar123
+  Rol: super_admin
 
-@app.route('/admin/vehiculo/<vehiculo_id>')
-@admin_empresa_required
-def ver_vehiculo(vehiculo_id):
-    empresa_id = session.get('empresa_id')
-    
-    vehiculos = leer_csv(VEHICULOS_CSV)
-    trabajos = leer_csv(TRABAJOS_CSV)
-    fotos = leer_csv(FOTOS_CSV)
-    
-    vehiculo = next((v for v in vehiculos if v['id'] == vehiculo_id and v['empresa_id'] == empresa_id), None)
-    
-    if not vehiculo:
-        flash('❌ Vehículo no encontrado o no tienes permiso para acceder')
-        return redirect(url_for('dashboard_admin_empresa'))
-    
-    trabajo = next((t for t in trabajos if t['vehiculo_id'] == vehiculo_id), {})
-    fotos_vehiculo = [f for f in fotos if f.get('trabajo_id') == trabajo.get('id')]
-    
-    # Separar fotos por tipo
-    fotos_llegada = [f for f in fotos_vehiculo if f.get('tipo_foto') == 'llegada']
-    fotos_proceso = [f for f in fotos_vehiculo if f.get('tipo_foto') == 'proceso']
-    fotos_terminado = [f for f in fotos_vehiculo if f.get('tipo_foto') == 'terminado']
-    
-    return render_template('ver_vehiculo.html', 
-                         vehiculo=vehiculo, 
-                         trabajo=trabajo,
-                         fotos_llegada=fotos_llegada,
-                         fotos_proceso=fotos_proceso,
-                         fotos_terminado=fotos_terminado)
+{Colors.BOLD}ADVERTENCIA:{Colors.END}
 
-@app.route('/admin/trabajo/<trabajo_id>/subir-fotos', methods=['GET', 'POST'])
-@admin_empresa_required
-def subir_fotos_trabajo(trabajo_id):
-    empresa_id = session.get('empresa_id')
+  Este programa es para uso legítimo en talleres mecánicos.
+  No lo uses para actividades fraudulentas.
+
+{Colors.BOLD}CONTROLES:{Colors.END}
+
+  - Para detener el servidor: Ctrl+C en la terminal
+    """
+    print(ayuda)
+
+def verificar_importaciones():
+    """Verifica que Flask pueda importarse"""
+    print(f"\n{Colors.BOLD}Verificando importaciones...{Colors.END}")
     
-    trabajos = leer_csv(TRABAJOS_CSV)
-    vehiculos = leer_csv(VEHICULOS_CSV)
-    fotos = leer_csv(FOTOS_CSV)
+    try:
+        __import__('flask')
+        print(f"{Colors.GREEN}  - Flask: OK{Colors.END}")
+        return True
+    except ImportError:
+        print(f"{Colors.RED}  - Flask: FALLO{Colors.END}")
+        return False
+
+def crear_accesos_directos():
+    """Crea accesos directos para cada sistema"""
+    sistema = get_system()
     
-    trabajo = next((t for t in trabajos if t['id'] == trabajo_id and t['empresa_id'] == empresa_id), None)
+    if sistema == 'windows':
+        # Crear .bat para Windows
+        with open('INICIAR_XONICAR.bat', 'w') as f:
+            f.write("""@echo off
+title XONICAR 2026 - Taller Manager
+color 1F
+echo ========================================
+echo      XONICAR 2026 - Taller Manager
+echo      Desarrollado por Darian Alberto
+echo ========================================
+echo.
+python start.py
+pause
+""")
+        print(f"{Colors.GREEN}Creado INICIAR_XONICAR.bat - Haz doble clic para ejecutar{Colors.END}")
     
-    if not trabajo:
-        flash('❌ Trabajo no encontrado')
-        return redirect(url_for('dashboard_admin_empresa'))
+    elif sistema == 'linux':
+        # Crear .sh para Linux
+        with open('INICIAR_XONICAR.sh', 'w') as f:
+            f.write("""#!/bin/bash
+echo "========================================"
+echo "      XONICAR 2026 - Taller Manager"
+echo "      Desarrollado por Darian Alberto"
+echo "========================================"
+echo ""
+python3 start.py
+read -p "Presiona Enter para salir"
+""")
+        os.chmod('INICIAR_XONICAR.sh', 0o755)
+        print(f"{Colors.GREEN}Creado INICIAR_XONICAR.sh - Ejecuta con: ./INICIAR_XONICAR.sh{Colors.END}")
     
-    vehiculo = next((v for v in vehiculos if v['id'] == trabajo['vehiculo_id']), None)
+    elif sistema == 'darwin':
+        # Crear .command para Mac
+        with open('INICIAR_XONICAR.command', 'w') as f:
+            f.write("""#!/bin/bash
+cd "$(dirname "$0")"
+echo "========================================"
+echo "      XONICAR 2026 - Taller Manager"
+echo "      Desarrollado por Darian Alberto"
+echo "========================================"
+echo ""
+python3 start.py
+""")
+        os.chmod('INICIAR_XONICAR.command', 0o755)
+        print(f"{Colors.GREEN}Creado INICIAR_XONICAR.command - Haz doble clic para ejecutar{Colors.END}")
+
+def main():
+    """Funcion principal"""
+    # Limpiar pantalla
+    if get_system() == 'windows':
+        os.system('cls')
+    else:
+        os.system('clear')
     
-    if request.method == 'POST':
-        tipo_foto = request.form['tipo_foto']
-        descripcion = request.form.get('descripcion', '')
-        archivos = request.files.getlist('fotos')
+    # Mostrar banner
+    print_banner()
+    
+    # Verificar si hay argumentos de ayuda
+    if len(sys.argv) > 1 and sys.argv[1] in ['-h', '--help', '/?']:
+        mostrar_ayuda()
+        input(f"\n{Colors.YELLOW}Presiona Enter para salir...{Colors.END}")
+        return
+    
+    # Verificar Python
+    if not check_python():
+        print(f"\n{Colors.RED}Error: Python no esta instalado{Colors.END}")
+        print("Instala Python desde: https://www.python.org/downloads/")
+        input(f"\n{Colors.YELLOW}Presiona Enter para salir...{Colors.END}")
+        return
+    
+    python_version = subprocess.run(get_python_command() + ['--version'], 
+                                   capture_output=True, text=True).stdout.strip()
+    print(f"{Colors.BOLD}Python:{Colors.END} {python_version}")
+    print(f"{Colors.BOLD}Directorio:{Colors.END} {os.path.dirname(os.path.abspath(__file__))}")
+    
+    # Crear directorios necesarios
+    crear_directorios()
+    
+    # Verificar dependencias
+    faltantes = check_dependencies()
+    
+    if faltantes:
+        print(f"\n{Colors.YELLOW}Faltan dependencias: {', '.join(faltantes)}{Colors.END}")
+        respuesta = input("Instalar automaticamente? (s/n): ")
         
-        fotos_subidas = []
+        if respuesta.lower() == 's':
+            install_dependencies(faltantes)
+        else:
+            print(f"\nPuedes instalarlas manualmente con:")
+            print(f"  pip install -r requisitos.txt")
+    
+    # Verificar que existe xonicar.py
+    if not os.path.exists('xonicar.py'):
+        print(f"\n{Colors.RED}Error: No se encuentra xonicar.py{Colors.END}")
+        print("Asegurate de que xonicar.py esta en el mismo directorio")
+        print("\nPuedes descargarlo desde:")
+        print("  https://github.com/XONIDU/xonicar")
+        input(f"\n{Colors.YELLOW}Presiona Enter para salir...{Colors.END}")
+        return
+    
+    # Verificar que Flask puede importarse
+    print(f"\n{Colors.BOLD}Verificando que todo funcione...{Colors.END}")
+    if not verificar_importaciones():
+        print(f"\n{Colors.RED}Error: No se puede importar Flask{Colors.END}")
+        print("El programa no puede continuar sin esta dependencia")
+        input(f"\n{Colors.YELLOW}Presiona Enter para salir...{Colors.END}")
+        return
+    
+    print(f"\n{Colors.BOLD}Iniciando XONICAR...{Colors.END}")
+    print(f"{Colors.BOLD}Para detener el servidor:{Colors.END} Ctrl+C")
+    print("-" * 60)
+    
+    # EJECUTAR xonicar.py - LA APLICACIÓN PRINCIPAL
+    try:
+        python_cmd = get_python_command()
+        cmd = python_cmd + ['xonicar.py']
+        print(f"Ejecutando: {' '.join(cmd)}")
+        print("-" * 60)
         
-        for archivo in archivos:
-            if archivo and archivo.filename:
-                # Generar nombre único
-                extension = os.path.splitext(archivo.filename)[1].lower()
-                if extension not in ['.jpg', '.jpeg', '.png', '.gif']:
-                    flash(f'❌ Formato no permitido: {extension}')
-                    continue
-                
-                nombre_unico = f"{trabajo_id}_{tipo_foto}_{generar_id()}{extension}"
-                ruta_guardado = os.path.join(app.config['UPLOAD_FOLDER'], nombre_unico)
-                
-                # Guardar archivo
-                try:
-                    archivo.save(ruta_guardado)
-                except Exception as e:
-                    flash(f'❌ Error al guardar archivo: {str(e)}')
-                    continue
-                
-                # Registrar en CSV
-                nueva_foto = {
-                    'id': generar_id(),
-                    'trabajo_id': trabajo_id,
-                    'empresa_id': empresa_id,
-                    'tipo_foto': tipo_foto,
-                    'ruta_foto': f'fotos/{nombre_unico}',
-                    'descripcion': descripcion,
-                    'fecha_subida': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'correo_enviado': '0'
-                }
-                
-                fotos.append(nueva_foto)
-                escribir_csv(FOTOS_CSV, fotos, 
-                           ['id', 'trabajo_id', 'empresa_id', 'tipo_foto', 
-                            'ruta_foto', 'descripcion', 'fecha_subida', 'correo_enviado'])
-                
-                fotos_subidas.append(nueva_foto)
+        # Ejecutar xonicar.py
+        resultado = subprocess.run(cmd)
         
-        if fotos_subidas:
-            flash(f'✅ {len(fotos_subidas)} fotos subidas exitosamente')
+        if resultado.returncode != 0:
+            print(f"\n{Colors.RED}Error: xonicar.py termino con codigo {resultado.returncode}{Colors.END}")
             
-            # Actualizar estado del trabajo si es necesario
-            if tipo_foto == 'terminado':
-                trabajo['estado'] = 'terminado'
-                trabajo['ultima_actualizacion'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                
-                # Actualizar vehículo también
-                if vehiculo:
-                    vehiculo['estado'] = 'terminado'
-                    todos_vehiculos = leer_csv(VEHICULOS_CSV)
-                    for v in todos_vehiculos:
-                        if v['id'] == vehiculo['id']:
-                            v['estado'] = 'terminado'
-                            break
-                    escribir_csv(VEHICULOS_CSV, todos_vehiculos, 
-                               ['id', 'empresa_id', 'cliente_nombre', 'cliente_email', 
-                                'cliente_telefono', 'marca', 'modelo', 'año', 'color', 
-                                'placa', 'vin', 'fecha_ingreso', 'estado', 'numero_orden'])
-                
-                escribir_csv(TRABAJOS_CSV, trabajos, 
-                           ['id', 'vehiculo_id', 'empresa_id', 'numero_orden', 
-                            'estado', 'descripcion', 'observaciones', 'costo_estimado', 
-                            'fecha_inicio', 'ultima_actualizacion'])
-        
-        return redirect(url_for('ver_vehiculo', vehiculo_id=trabajo['vehiculo_id']))
+    except FileNotFoundError:
+        print(f"\n{Colors.RED}Error: No se encuentra xonicar.py{Colors.END}")
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}Servidor detenido por el usuario{Colors.END}")
+    except Exception as e:
+        print(f"\n{Colors.RED}Error ejecutando xonicar.py: {e}{Colors.END}")
     
-    # Obtener fotos existentes para este trabajo
-    fotos_existentes = [f for f in fotos if f.get('trabajo_id') == trabajo_id]
+    print(f"\n{Colors.BLUE}Gracias por usar XONICAR 2026{Colors.END}")
+    print(f"{Colors.BLUE}Desarrollado por Darian Alberto Camacho Salas{Colors.END}")
+    print(f"{Colors.BLUE}#Somos XONIDU{Colors.END}")
     
-    return render_template('subir_fotos.html', 
-                         trabajo=trabajo, 
-                         vehiculo=vehiculo,
-                         fotos_existentes=fotos_existentes)
-
-@app.route('/admin/trabajo/<trabajo_id>/actualizar-estado', methods=['POST'])
-@admin_empresa_required
-def actualizar_estado_trabajo(trabajo_id):
-    empresa_id = session.get('empresa_id')
-    nuevo_estado = request.form['estado']
-    
-    trabajos = leer_csv(TRABAJOS_CSV)
-    vehiculos = leer_csv(VEHICULOS_CSV)
-    
-    for trabajo in trabajos:
-        if trabajo['id'] == trabajo_id and trabajo['empresa_id'] == empresa_id:
-            trabajo['estado'] = nuevo_estado
-            trabajo['ultima_actualizacion'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
-            # Actualizar vehículo también
-            for vehiculo in vehiculos:
-                if vehiculo['id'] == trabajo['vehiculo_id']:
-                    vehiculo['estado'] = nuevo_estado
-                    break
-            
-            escribir_csv(VEHICULOS_CSV, vehiculos, 
-                       ['id', 'empresa_id', 'cliente_nombre', 'cliente_email', 
-                        'cliente_telefono', 'marca', 'modelo', 'año', 'color', 
-                        'placa', 'vin', 'fecha_ingreso', 'estado', 'numero_orden'])
-            
-            break
-    
-    escribir_csv(TRABAJOS_CSV, trabajos, 
-               ['id', 'vehiculo_id', 'empresa_id', 'numero_orden', 
-                'estado', 'descripcion', 'observaciones', 'costo_estimado', 
-                'fecha_inicio', 'ultima_actualizacion'])
-    
-    flash(f'✅ Estado actualizado a {nuevo_estado}')
-    return redirect(request.referrer or url_for('dashboard_admin_empresa'))
-
-# =============================================
-# EJECUCIÓN PRINCIPAL
-# =============================================
+    # Pausa al final (excepto en Windows que ya tiene pausa por el .bat)
+    if get_system() != 'windows':
+        input(f"\n{Colors.YELLOW}Presiona Enter para salir...{Colors.END}")
 
 if __name__ == '__main__':
-    # Inicializar sistema
-    inicializar_sistema()
-    
-    print("=" * 60)
-    print("🚀 SISTEMA DE GESTIÓN DE TALLERES - TALLER MANAGER")
-    print("=" * 60)
-    print("👑 Super Administrador:")
-    print("   Usuario: xonicar123")
-    print("   Contraseña: xonicar123")
-    print("")
-    print("📁 Estructura creada:")
-    print("   • /data/ - Archivos CSV de base de datos")
-    print("   • /static/fotos/ - Fotos subidas")
-    print("   • /templates/ - Plantillas HTML")
-    print("")
-    print("🌐 Accede a: http://127.0.0.1:5000")
-    print("=" * 60)
-    
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    try:
+        # Crear accesos directos
+        crear_accesos_directos()
+        
+        # Ejecutar programa principal
+        main()
+    except KeyboardInterrupt:
+        print(f"\n{Colors.YELLOW}Saliendo...{Colors.END}")
+    except Exception as e:
+        print(f"\n{Colors.RED}Error inesperado: {e}{Colors.END}")
+        input(f"\n{Colors.YELLOW}Presiona Enter para salir...{Colors.END}")
