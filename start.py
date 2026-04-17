@@ -5,7 +5,7 @@
 XONICAR 2026 - Lanzador Universal del Taller Manager
 Este script ejecuta xonicar.py y verifica dependencias
 Desarrollado por: Darian Alberto Camacho Salas
-#Somos XONIDU
+#Somos: XONIDU
 """
 
 import subprocess
