@@ -5,26 +5,25 @@
 #No requieres mayor requisito
 #Solo ejecuta el siguiente comando:
 
-python start.py
+#python start.py
 
----
 
 #Para la interfaz web:
 ## Windows:
-pip install flask
+#pip install flask
 
----
 
 ## Arch Linux:
-sudo pacman -S python-pip
-pip install flask --break-system-packages
+#sudo pacman -S python-pip
+#pip install flask --break-system-packages
 
 ## Ubuntu y derivados:
-sudo apt update
-sudo apt install python3 python3-pip -y
-pip3 install flask --break-system-packages
+#sudo apt update
+#sudo apt install python3 python3-pip -y
+#pip3 install flask --break-system-packages
 
----
 
 # Ejecucion:
-python start.py
+#python start.py
+
+flask
