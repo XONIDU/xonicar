@@ -92,6 +92,23 @@ mkdir -p static/fotos data
 
 ## ⚙️ Uso
 
+### En Windows (recomendado)
+
+Ejecuta directamente el archivo **XONICAR.bat** que ya incluye permisos de administrador:
+
+```bash
+XONICAR.bat
+```
+
+Este archivo:
+
+- Solicita automáticamente permisos de administrador (UAC).
+- Verifica e instala dependencias si es necesario.
+- Inicia el servidor en `http://localhost:5000`.
+- Muestra un mensaje claro de que está funcionando.
+
+### En Linux / macOS
+
 Ejecuta el lanzador:
 
 ```bash
@@ -130,8 +147,9 @@ Accede a la plataforma:
 ```
 xonicar/
 ├── README.md                    # Documentación
+├── XONICAR.bat                   # Lanzador para Windows (con UAC)
 ├── start.py                      # Lanzador (verifica dependencias y ejecuta)
-├── xonicar.py                     # Aplicación principal Flask
+├── xonicar.py                    # Aplicación principal Flask
 ├── requisitos.txt                # Dependencias Python
 ├── data/                         # Almacenamiento JSON
 │   ├── empresas.json
@@ -139,7 +157,7 @@ xonicar/
 │   └── vehiculos.json
 ├── static/
 │   └── fotos/                    # Imágenes subidas
-└── templates/                     # Plantillas HTML
+└── templates/                    # Plantillas HTML
     ├── login.html
     ├── dashboard_super_admin.html
     ├── dashboard_admin_empresa.html
@@ -168,6 +186,15 @@ xonicar/
 - **“No se guardan fotos”**: Verifica permisos de escritura en `static/fotos/`.
 - **“Móvil no conecta”**: Comprueba el firewall y que uses la IP correcta de la máquina anfitriona.
 - **“Error al cargar imágenes”**: Verifica que el formato sea soportado (JPG, JPEG, PNG, GIF).
+- **“Error de permisos en Windows”**: Ejecuta `XONICAR.bat` como administrador (clic derecho → "Ejecutar como administrador").
+
+## 📦 Archivos incluidos
+
+- `XONICAR.bat` — Lanzador para Windows con solicitud automática de permisos de administrador.
+- `start.py` — Lanzador universal (Linux/macOS/Windows) que verifica dependencias.
+- `xonicar.py` — Aplicación principal Flask.
+- `requisitos.txt` — Dependencias Python.
+- `README.md` — Documentación completa.
 
 ## ✉️ Contacto y Créditos
 
@@ -178,16 +205,4 @@ xonicar/
   - 📸 Instagram: [@xonidu](https://instagram.com/xonidu)
   - 📘 Facebook: [xonidu](https://facebook.com/xonidu)
 - **#Somos XONIDU**
-
-## 🔄 Flujos de trabajo sugeridos
-
-Este proyecto puede integrarse con:
-
-- **Python application** – Crear y testear aplicación Python.
-- **SLSA Generic generator** – Generar proveniencia SLSA3.
-- **Jekyll using Docker image** – Empaquetar documentación.
-
----
-
-**XONICAR v1.0** • Sistema de gestión en mecánica automotriz • by XONIDU
 
